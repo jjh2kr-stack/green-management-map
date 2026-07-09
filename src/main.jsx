@@ -1,5 +1,210 @@
-import React,{useMemo,useState}from'react';import{createRoot}from'react-dom/client';import{MapPin,Camera,ClipboardCheck,FileText,Search,TreePine,Video,AlertTriangle,CheckCircle2}from'lucide-react';import'./style.css';
-const checklist={"잡목 제거":["작업구역 라바콘·안전띠 설치 확인","보행자 우회 동선 확보","예초기·톱날·연료 누유 점검","보안경·안전화·안전모·장갑 착용","비산물 방향 및 주변 차량 확인","작업 후 잔재물·폐기물 정리"],"벌목":["벌목 방향 및 대피로 사전 확인","반경 내 작업자·보행자 출입 통제","체인톱 체인 장력·브레이크 점검","고소부 절단 시 낙하물 통제","신호수 배치 및 무전 확인","절단목 안정 적재 및 반출"],"고소작업":["작업대·사다리 전도방지 확인","안전대 체결 및 추락방지 조치","상부 작업 반경 출입 통제","강풍·우천 시 작업 중지","공구 낙하방지 끈 사용","작업 후 자재·공구 회수"],"중장비 작업":["장비 일상점검 및 후진경보기 확인","유도자 배치 및 사각지대 확인","작업반경 출입 통제","지반 침하·경사면 안정성 확인","협착 위험구간 접근 금지","작업 후 장비 키 회수 및 주차브레이크 확인"]};
-const cctvs=[['시청 앞 CCTV','서울광장 주변'],['덕수궁길 CCTV','보행자 동선 확인'],['무교로 CCTV','차량 흐름 확인']];
-function App(){const[proc,setProc]=useState('잡목 제거');const[place,setPlace]=useState('서울광장 주변 녹지대');const[done,setDone]=useState({});const items=useMemo(()=>checklist[proc]||[],[proc]);const pct=Math.round(Object.values(done).filter(Boolean).length/(items.length||1)*100);return <div><header><div><b>GreenTBM</b><span>녹지관리 · CCTV · TBM</span></div><button>개인용 1차 버전</button></header><main><section className="map"><div className="mapbar"><div><Search size={18}/><input value={place} onChange={e=>setPlace(e.target.value)} placeholder="작업 위치 입력"/></div><button>위치 검색</button></div><div className="fakeMap"><div className="tile">NAVER MAP AREA</div><div className="zone"><MapPin/>오늘 작업구역</div><div className="tree t1"><TreePine/></div><div className="tree t2"><TreePine/></div><div className="cam c1"><Video/></div><div className="cam c2"><Video/></div><div className="warn"><AlertTriangle/>보행자 접촉 주의</div></div><div className="legend"><span>📍 작업구역</span><span>🌳 녹지/수목</span><span>🎥 CCTV</span><span>⚠️ 위험요인</span></div></section><aside><section className="card"><h2>오늘 작업</h2><label>공정</label><select value={proc} onChange={e=>{setProc(e.target.value);setDone({})}}>{Object.keys(checklist).map(k=><option key={k}>{k}</option>)}</select><label>작업위치</label><input value={place} onChange={e=>setPlace(e.target.value)}/><div className="chips"><span>보행자 접촉</span><span>비산물</span><span>장비 끼임</span></div></section><section className="card"><h2><ClipboardCheck/> TBM 체크리스트 <em>{pct}%</em></h2>{items.map((it,i)=><label className="check" key={it}><input type="checkbox" checked={!!done[i]} onChange={e=>setDone({...done,[i]:e.target.checked})}/>{it}</label>)}<button className="primary"><CheckCircle2/> 완료 저장</button></section><section className="card"><h2><Video/> 주변 CCTV</h2>{cctvs.map(([a,b])=><div className="list" key={a}><b>{a}</b><span>{b}</span><button onClick={()=>window.open('https://topis.seoul.go.kr/map/openCctvMap.do','_blank')}>보기</button></div>)}</section><section className="actions"><button><Camera/> 사진 등록</button><button><FileText/> PDF 출력</button></section></aside></main></div>}
-createRoot(document.getElementById('root')).render(<App/>);
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import checklistData from './data/checklists.json';
+import './styles/style.css';
+
+const NAVER_MAP_KEY = import.meta.env.VITE_NAVER_MAP_KEY || 'bfyno0gxjg';
+
+function loadNaverMapScript() {
+  if (window.naver?.maps) return Promise.resolve();
+  const existing = document.querySelector('script[data-naver-map="true"]');
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      existing.addEventListener('load', resolve, { once: true });
+      existing.addEventListener('error', reject, { once: true });
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAP_KEY}`;
+    script.async = true;
+    script.dataset.naverMap = 'true';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+function splitOriginalLines(text) {
+  if (!text) return [];
+  return String(text).split('\n').filter((line) => line.trim() !== '');
+}
+
+function ChecklistBlock({ title, text, tone = 'green' }) {
+  const lines = splitOriginalLines(text);
+  return (
+    <section className={`card checklist-card ${tone}`}>
+      <h3>{title}</h3>
+      {lines.length === 0 ? (
+        <p className="empty">등록된 체크리스트 없음</p>
+      ) : (
+        <div className="checklist-list">
+          {lines.map((line, index) => (
+            <label key={`${title}-${index}`} className="check-row">
+              <input type="checkbox" />
+              <span>{line}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PlainInfo({ title, text }) {
+  const lines = splitOriginalLines(text);
+  if (!lines.length) return null;
+  return (
+    <section className="card small-card">
+      <h3>{title}</h3>
+      {lines.map((line, index) => <p key={index} className="raw-line">{line}</p>)}
+    </section>
+  );
+}
+
+function MapPanel() {
+  const mapRef = useRef(null);
+  const [mapStatus, setMapStatus] = useState('지도 불러오는 중');
+
+  useEffect(() => {
+    let cancelled = false;
+    loadNaverMapScript()
+      .then(() => {
+        if (cancelled || !mapRef.current) return;
+        const center = new window.naver.maps.LatLng(37.5665, 126.9780);
+        const map = new window.naver.maps.Map(mapRef.current, {
+          center,
+          zoom: 16,
+          mapTypeControl: true,
+          zoomControl: true,
+          zoomControlOptions: { position: window.naver.maps.Position.TOP_RIGHT }
+        });
+
+        new window.naver.maps.Polygon({
+          map,
+          paths: [
+            new window.naver.maps.LatLng(37.56715, 126.97670),
+            new window.naver.maps.LatLng(37.56720, 126.97920),
+            new window.naver.maps.LatLng(37.56570, 126.97935),
+            new window.naver.maps.LatLng(37.56560, 126.97685)
+          ],
+          fillColor: '#22c55e',
+          fillOpacity: 0.22,
+          strokeColor: '#15803d',
+          strokeWeight: 3
+        });
+
+        new window.naver.maps.Marker({
+          position: center,
+          map,
+          title: '작업구역',
+          icon: {
+            content: '<div class="map-badge work">작업구역</div>',
+            anchor: new window.naver.maps.Point(42, 18)
+          }
+        });
+
+        const cctvs = [
+          { name: '시청 앞 CCTV', lat: 37.5659, lng: 126.9774 },
+          { name: '덕수궁길 CCTV', lat: 37.5671, lng: 126.9758 },
+          { name: '무교로 CCTV', lat: 37.5670, lng: 126.9799 }
+        ];
+        cctvs.forEach((cctv) => {
+          const marker = new window.naver.maps.Marker({
+            position: new window.naver.maps.LatLng(cctv.lat, cctv.lng),
+            map,
+            title: cctv.name,
+            icon: {
+              content: '<div class="map-badge cctv">CCTV</div>',
+              anchor: new window.naver.maps.Point(30, 18)
+            }
+          });
+          const info = new window.naver.maps.InfoWindow({
+            content: `<div style="padding:12px;min-width:180px;line-height:1.5"><strong>${cctv.name}</strong><br/><button onclick="window.open('https://topis.seoul.go.kr/map/openCctvMap.do','_blank')" style="margin-top:8px;border:0;background:#2563eb;color:#fff;padding:7px 10px;border-radius:8px;cursor:pointer">CCTV 보기</button></div>`
+          });
+          window.naver.maps.Event.addListener(marker, 'click', () => info.open(map, marker));
+        });
+        setMapStatus('지도 연동 완료');
+      })
+      .catch(() => setMapStatus('네이버 지도 인증 또는 호출 실패'));
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <section className="map-section">
+      <div ref={mapRef} className="map" />
+      <div className="map-status">{mapStatus}</div>
+      <div className="legend">
+        <span><b className="dot green" />작업구역</span>
+        <span><b className="dot blue" />CCTV</span>
+        <span><b className="dot yellow" />TBM</span>
+      </div>
+    </section>
+  );
+}
+
+function App() {
+  const works = checklistData.works;
+  const [selectedWorkName, setSelectedWorkName] = useState(works[0]?.workName || '');
+  const [query, setQuery] = useState('');
+
+  const selectedWork = useMemo(
+    () => works.find((work) => work.workName === selectedWorkName) || works[0],
+    [selectedWorkName, works]
+  );
+
+  const filteredWorks = useMemo(() => {
+    const q = query.trim();
+    if (!q) return works;
+    return works.filter((work) => work.workName.includes(q) || work.category.includes(q));
+  }, [query, works]);
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">녹지관리 현장 통합 플랫폼</p>
+          <h1>GreenTBM</h1>
+        </div>
+        <div className="source">체크리스트 원본: {checklistData.sourceFile}</div>
+      </header>
+
+      <main className="grid">
+        <MapPanel />
+
+        <aside className="side-panel">
+          <section className="card select-card">
+            <h2>공종 선택</h2>
+            <input
+              className="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="공종명 검색"
+            />
+            <select
+              value={selectedWork?.workName || ''}
+              onChange={(event) => setSelectedWorkName(event.target.value)}
+            >
+              {filteredWorks.map((work) => (
+                <option key={work.workName} value={work.workName}>
+                  {work.workName}
+                </option>
+              ))}
+            </select>
+            <div className="meta-row"><span>작업분류</span><strong>{selectedWork?.category || '-'}</strong></div>
+            <div className="meta-row"><span>공종명</span><strong>{selectedWork?.workName || '-'}</strong></div>
+          </section>
+
+          <ChecklistBlock title="공통사항" text={checklistData.common.checklist} />
+          <PlainInfo title="공통 개인안전장구류" text={checklistData.common.ppe} />
+
+          <ChecklistBlock title="공종별 TBM 체크리스트" text={selectedWork?.checklist || ''} tone="blue" />
+          <PlainInfo title="공종별 개인안전장구류" text={selectedWork?.ppe || ''} />
+          <PlainInfo title="비고" text={selectedWork?.note || ''} />
+        </aside>
+      </main>
+    </div>
+  );
+}
+
+createRoot(document.getElementById('root')).render(<App />);
