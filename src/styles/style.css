@@ -52,6 +52,10 @@ h1 { margin: 0; font-size: 25px; letter-spacing: -.03em; }
 .cctv-list b { font-size: 12px; color: #2563eb; }
 .action-link { display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 10px; min-height: 38px; border-radius: 12px; background: #14532d; color: #fff; font-weight: 800; text-decoration: none; font-size: 13px; }
 .weather-note { margin: 8px 0 0; color:#5d6b63; font-size: 13px; line-height: 1.45; }
+.warning-box { margin-top: 10px; border: 1px solid #fed7aa; background: #fff7ed; border-radius: 12px; padding: 10px; display: grid; gap: 4px; }
+.warning-box b { color: #c2410c; font-size: 13px; }
+.warning-box span { color: #7c2d12; font-size: 12px; line-height: 1.45; }
+.weather-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .side-panel { overflow: auto; padding: 16px; background: #f8faf9; border-left: 1px solid #dbe5dd; }
 .card { background: #fff; border: 1px solid #e1e8e3; border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, .05); }
 .card h2, .card h3 { margin: 0 0 12px; color: #14532d; letter-spacing: -.03em; }

@@ -4,8 +4,10 @@ import checklistData from './data/checklists.json';
 import './styles/style.css';
 
 const NAVER_MAP_KEY = import.meta.env.VITE_NAVER_MAP_KEY || 'bfyno0gxjg';
-const SEOUL_URBAN_PORTAL_URL = 'https://urban.seoul.go.kr/view/map/main.html';
+const SMARTWAY_URL = 'https://smartway.seoul.go.kr/web/main.view';
 const WEATHER_URL = 'https://www.weather.go.kr/w/index.do';
+const WEATHER_WARNING_URL = 'https://www.weather.go.kr/w/weather/warning/status.do';
+const NAVER_MAP_SEARCH_URL = 'https://map.naver.com/p/search/';
 
 function loadNaverMapScript() {
   if (window.naver?.maps) return Promise.resolve();
@@ -43,26 +45,63 @@ function getDistanceMeters(a, b) {
 }
 
 const sampleCctvs = [
-  { name: '시청 앞 CCTV', lat: 37.5659, lng: 126.9774, source: '서울도시공간포털' },
-  { name: '덕수궁길 CCTV', lat: 37.5671, lng: 126.9758, source: '서울도시공간포털' },
-  { name: '무교로 CCTV', lat: 37.5670, lng: 126.9799, source: '서울도시공간포털' },
-  { name: '서울역 주변 CCTV', lat: 37.5559, lng: 126.9723, source: '서울도시공간포털' },
-  { name: '광화문광장 CCTV', lat: 37.5759, lng: 126.9768, source: '서울도시공간포털' },
-  { name: '청계광장 CCTV', lat: 37.5690, lng: 126.9787, source: '서울도시공간포털' },
-  { name: '남산공원 북측 CCTV', lat: 37.5532, lng: 126.9810, source: '서울도시공간포털' },
-  { name: '여의도공원 CCTV', lat: 37.5267, lng: 126.9228, source: '서울도시공간포털' },
-  { name: '서울숲 CCTV', lat: 37.5446, lng: 127.0374, source: '서울도시공간포털' },
-  { name: '월드컵공원 CCTV', lat: 37.5682, lng: 126.8932, source: '서울도시공간포털' },
-  { name: '보라매공원 CCTV', lat: 37.4930, lng: 126.9180, source: '서울도시공간포털' },
-  { name: '올림픽공원 CCTV', lat: 37.5206, lng: 127.1216, source: '서울도시공간포털' },
-  { name: '어린이대공원 CCTV', lat: 37.5493, lng: 127.0819, source: '서울도시공간포털' },
-  { name: '양재시민의숲 CCTV', lat: 37.4705, lng: 127.0354, source: '서울도시공간포털' },
-  { name: '북서울꿈의숲 CCTV', lat: 37.6217, lng: 127.0413, source: '서울도시공간포털' },
-  { name: '서대문독립공원 CCTV', lat: 37.5745, lng: 126.9564, source: '서울도시공간포털' }
+  { name: '시청 앞 CCTV', lat: 37.5659, lng: 126.9774, source: '서울도시고속도로 Smartway' },
+  { name: '덕수궁길 CCTV', lat: 37.5671, lng: 126.9758, source: '서울도시고속도로 Smartway' },
+  { name: '무교로 CCTV', lat: 37.5670, lng: 126.9799, source: '서울도시고속도로 Smartway' },
+  { name: '서울역 주변 CCTV', lat: 37.5559, lng: 126.9723, source: '서울도시고속도로 Smartway' },
+  { name: '광화문광장 CCTV', lat: 37.5759, lng: 126.9768, source: '서울도시고속도로 Smartway' },
+  { name: '청계광장 CCTV', lat: 37.5690, lng: 126.9787, source: '서울도시고속도로 Smartway' },
+  { name: '남산공원 북측 CCTV', lat: 37.5532, lng: 126.9810, source: '서울도시고속도로 Smartway' },
+  { name: '여의도공원 CCTV', lat: 37.5267, lng: 126.9228, source: '서울도시고속도로 Smartway' },
+  { name: '서울숲 CCTV', lat: 37.5446, lng: 127.0374, source: '서울도시고속도로 Smartway' },
+  { name: '월드컵공원 CCTV', lat: 37.5682, lng: 126.8932, source: '서울도시고속도로 Smartway' },
+  { name: '보라매공원 CCTV', lat: 37.4930, lng: 126.9180, source: '서울도시고속도로 Smartway' },
+  { name: '올림픽공원 CCTV', lat: 37.5206, lng: 127.1216, source: '서울도시고속도로 Smartway' },
+  { name: '어린이대공원 CCTV', lat: 37.5493, lng: 127.0819, source: '서울도시고속도로 Smartway' },
+  { name: '양재시민의숲 CCTV', lat: 37.4705, lng: 127.0354, source: '서울도시고속도로 Smartway' },
+  { name: '북서울꿈의숲 CCTV', lat: 37.6217, lng: 127.0413, source: '서울도시고속도로 Smartway' },
+  { name: '서대문독립공원 CCTV', lat: 37.5745, lng: 126.9564, source: '서울도시고속도로 Smartway' }
 ];
 
-function makePortalLink(placeName) {
-  return `${SEOUL_URBAN_PORTAL_URL}?q=${encodeURIComponent(placeName || '')}`;
+function makeSmartwayLink(placeName) {
+  return `${SMARTWAY_URL}?q=${encodeURIComponent(placeName || '')}`;
+}
+
+function makeNaverMapSearchLink(placeName) {
+  return `${NAVER_MAP_SEARCH_URL}${encodeURIComponent(placeName || '')}`;
+}
+
+const seoulPlaceFallbacks = [
+  { name: '서울광장', lat: 37.5665, lng: 126.9780, address: '서울 중구 세종대로' },
+  { name: '광화문광장', lat: 37.5759, lng: 126.9768, address: '서울 종로구 세종대로' },
+  { name: '청계광장', lat: 37.5690, lng: 126.9787, address: '서울 중구 청계천로' },
+  { name: '서울숲', lat: 37.5446, lng: 127.0374, address: '서울 성동구 뚝섬로 273' },
+  { name: '남산공원', lat: 37.5532, lng: 126.9810, address: '서울 중구 삼일대로 231' },
+  { name: '여의도공원', lat: 37.5267, lng: 126.9228, address: '서울 영등포구 여의공원로 68' },
+  { name: '월드컵공원', lat: 37.5682, lng: 126.8932, address: '서울 마포구 하늘공원로 95' },
+  { name: '보라매공원', lat: 37.4930, lng: 126.9180, address: '서울 동작구 여의대방로20길 33' },
+  { name: '올림픽공원', lat: 37.5206, lng: 127.1216, address: '서울 송파구 올림픽로 424' },
+  { name: '어린이대공원', lat: 37.5493, lng: 127.0819, address: '서울 광진구 능동로 216' },
+  { name: '양재시민의숲', lat: 37.4705, lng: 127.0354, address: '서울 서초구 매헌로 99' },
+  { name: '북서울꿈의숲', lat: 37.6217, lng: 127.0413, address: '서울 강북구 월계로 173' },
+  { name: '서대문독립공원', lat: 37.5745, lng: 126.9564, address: '서울 서대문구 통일로 251' },
+  { name: '선유도공원', lat: 37.5431, lng: 126.9002, address: '서울 영등포구 선유로 343' },
+  { name: '반포한강공원', lat: 37.5106, lng: 126.9959, address: '서울 서초구 신반포로11길 40' },
+  { name: '잠실한강공원', lat: 37.5177, lng: 127.0861, address: '서울 송파구 한가람로 65' },
+  { name: '망원한강공원', lat: 37.5567, lng: 126.8994, address: '서울 마포구 마포나루길 467' },
+  { name: '중랑천', lat: 37.5847, lng: 127.0730, address: '서울 중랑천 일대' },
+  { name: '불광천', lat: 37.5887, lng: 126.9156, address: '서울 은평구 불광천 일대' },
+  { name: '안양천', lat: 37.5170, lng: 126.8815, address: '서울 양천구 안양천 일대' }
+];
+
+function findFallbackPlace(keyword) {
+  const q = keyword.replace(/\s/g, '').toLowerCase();
+  if (!q) return null;
+  return seoulPlaceFallbacks.find((place) => {
+    const name = place.name.replace(/\s/g, '').toLowerCase();
+    const address = place.address.replace(/\s/g, '').toLowerCase();
+    return name.includes(q) || q.includes(name) || address.includes(q);
+  }) || null;
 }
 
 function ChecklistBlock({ title, text, tone = 'green' }) {
@@ -143,7 +182,7 @@ function MapPanel({ selectedWork }) {
       });
 
       const info = new window.naver.maps.InfoWindow({
-        content: `<div class="info-window"><strong>${cctv.name}</strong><br/>거리 약 ${cctv.distance.toLocaleString()}m<br/><span>출처: ${cctv.source}</span><br/><button onclick="window.open('${makePortalLink(place.name)}','_blank')">서울도시공간포털에서 확인</button></div>`
+        content: `<div class="info-window"><strong>${cctv.name}</strong><br/>거리 약 ${cctv.distance.toLocaleString()}m<br/><span>출처: ${cctv.source}</span><br/><button onclick="window.open('${makeSmartwayLink(place.name)}','_blank')">Smartway CCTV 확인</button></div>`
       });
       window.naver.maps.Event.addListener(marker, 'click', () => info.open(map, marker));
       cctvMarkerRefs.current.push(marker);
@@ -208,21 +247,36 @@ function MapPanel({ selectedWork }) {
     }
 
     setSearchMessage('작업구역 검색 중...');
-    window.naver.maps.Service.geocode({ query: keyword.includes('서울') ? keyword : `서울 ${keyword}` }, (status, response) => {
-      if (status !== window.naver.maps.Service.Status.OK || !response.v2.addresses.length) {
-        setSearchMessage('검색 결과가 없습니다. 예: 서울숲, 보라매공원, 양재시민의숲');
-        return;
-      }
-      const result = response.v2.addresses[0];
-      const place = {
-        name: keyword,
-        lat: Number(result.y),
-        lng: Number(result.x),
-        address: result.roadAddress || result.jibunAddress || result.englishAddress || ''
-      };
+
+    const fallback = findFallbackPlace(keyword);
+    const applyPlace = (place, message) => {
       setSelectedPlace(place);
       updateWorkPlace(place);
-      setSearchMessage('검색 결과 기준으로 반경 500m 주변 CCTV 목록을 갱신했습니다.');
+      setSearchMessage(message);
+    };
+
+    const geocodeKeyword = keyword.includes('서울') ? keyword : `서울 ${keyword}`;
+    window.naver.maps.Service.geocode({ query: geocodeKeyword }, (status, response) => {
+      const addresses = response?.v2?.addresses || [];
+
+      if (status === window.naver.maps.Service.Status.OK && addresses.length) {
+        const result = addresses[0];
+        const place = {
+          name: keyword,
+          lat: Number(result.y),
+          lng: Number(result.x),
+          address: result.roadAddress || result.jibunAddress || result.englishAddress || ''
+        };
+        applyPlace(place, '네이버지도 검색 결과 기준으로 반경 500m 주변 CCTV 목록을 갱신했습니다.');
+        return;
+      }
+
+      if (fallback) {
+        applyPlace(fallback, '네이버 지오코딩 결과가 없어 등록된 서울 녹지/공원 좌표로 이동했습니다. 주변 CCTV 목록을 갱신했습니다.');
+        return;
+      }
+
+      setSearchMessage('검색 결과가 없습니다. 네이버 클라우드에서 Geocoding API가 켜져 있는지 확인하세요. 예: 서울숲, 보라매공원, 양재시민의숲');
     });
   }
 
@@ -282,14 +336,14 @@ function MapPanel({ selectedWork }) {
             <button
               key={cctv.name}
               type="button"
-              onClick={() => window.open(makePortalLink(selectedPlace.name), '_blank')}
+              onClick={() => window.open(makeSmartwayLink(selectedPlace.name), '_blank')}
             >
               <span>{cctv.name}</span>
               <b>약 {cctv.distance.toLocaleString()}m</b>
             </button>
           ))}
         </div>
-        <ActionLink href={makePortalLink(selectedPlace.name)}>서울도시공간포털 CCTV 열기</ActionLink>
+        <ActionLink href={makeSmartwayLink(selectedPlace.name)}>Smartway CCTV 열기</ActionLink>
       </div>
 
       <div className="floating-card weather-panel">
@@ -298,8 +352,8 @@ function MapPanel({ selectedWork }) {
           <span>기상청</span>
         </div>
         <p className="place-label">작업구역: {selectedPlace.name}</p>
-        <p className="weather-note">작업 전 강수·폭염·한파·강풍 확인</p>
-        <ActionLink href={WEATHER_URL}>기상청 날씨 확인</ActionLink>
+        <p className="weather-note">작업 전 강수·폭염·한파·강풍 확인</p><div className="warning-box"><b>기상특보</b><span>특보가 내려진 경우 기상청 특보 화면에서 실시간 내용 확인</span></div>
+        <div className="weather-actions"><ActionLink href={WEATHER_URL}>기상청 날씨 확인</ActionLink><ActionLink href={WEATHER_WARNING_URL}>기상특보 확인</ActionLink></div>
       </div>
     </section>
   );
