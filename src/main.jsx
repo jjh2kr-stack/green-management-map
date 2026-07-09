@@ -10,14 +10,17 @@ const WEATHER_WARNING_URL = 'https://www.weather.go.kr/w/weather/warning/status.
 const NAVER_MAP_SEARCH_URL = 'https://map.naver.com/p/search/';
 
 function loadNaverMapScript() {
-  if (window.naver?.maps) return Promise.resolve();
+  if (window.naver?.maps?.Service?.geocode) return Promise.resolve();
+
   const existing = document.querySelector('script[data-naver-map="true"]');
   if (existing) {
     return new Promise((resolve, reject) => {
+      if (window.naver?.maps?.Service?.geocode) resolve();
       existing.addEventListener('load', resolve, { once: true });
       existing.addEventListener('error', reject, { once: true });
     });
   }
+
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAP_KEY}&submodules=geocoder`;
@@ -60,16 +63,13 @@ const sampleCctvs = [
   { name: '어린이대공원 CCTV', lat: 37.5493, lng: 127.0819, source: '서울도시고속도로 Smartway' },
   { name: '양재시민의숲 CCTV', lat: 37.4705, lng: 127.0354, source: '서울도시고속도로 Smartway' },
   { name: '북서울꿈의숲 CCTV', lat: 37.6217, lng: 127.0413, source: '서울도시고속도로 Smartway' },
-  { name: '서대문독립공원 CCTV', lat: 37.5745, lng: 126.9564, source: '서울도시고속도로 Smartway' }
+  { name: '서대문독립공원 CCTV', lat: 37.5745, lng: 126.9564, source: '서울도시고속도로 Smartway' },
+  { name: '선유도공원 CCTV', lat: 37.5431, lng: 126.9002, source: '서울도시고속도로 Smartway' },
+  { name: '반포한강공원 CCTV', lat: 37.5106, lng: 126.9959, source: '서울도시고속도로 Smartway' },
+  { name: '잠실한강공원 CCTV', lat: 37.5177, lng: 127.0861, source: '서울도시고속도로 Smartway' },
+  { name: '망원한강공원 CCTV', lat: 37.5567, lng: 126.8994, source: '서울도시고속도로 Smartway' },
+  { name: '강남역 주변 CCTV', lat: 37.4979, lng: 127.0276, source: '서울도시고속도로 Smartway' }
 ];
-
-function makeSmartwayLink(placeName) {
-  return `${SMARTWAY_URL}?q=${encodeURIComponent(placeName || '')}`;
-}
-
-function makeNaverMapSearchLink(placeName) {
-  return `${NAVER_MAP_SEARCH_URL}${encodeURIComponent(placeName || '')}`;
-}
 
 const seoulPlaceFallbacks = [
   { name: '서울광장', lat: 37.5665, lng: 126.9780, address: '서울 중구 세종대로' },
@@ -91,17 +91,75 @@ const seoulPlaceFallbacks = [
   { name: '망원한강공원', lat: 37.5567, lng: 126.8994, address: '서울 마포구 마포나루길 467' },
   { name: '중랑천', lat: 37.5847, lng: 127.0730, address: '서울 중랑천 일대' },
   { name: '불광천', lat: 37.5887, lng: 126.9156, address: '서울 은평구 불광천 일대' },
-  { name: '안양천', lat: 37.5170, lng: 126.8815, address: '서울 양천구 안양천 일대' }
+  { name: '안양천', lat: 37.5170, lng: 126.8815, address: '서울 양천구 안양천 일대' },
+  { name: '강남역', lat: 37.4979, lng: 127.0276, address: '서울 강남구 강남대로' }
 ];
 
+function normalizeKeyword(value) {
+  return String(value || '').replace(/\s/g, '').toLowerCase();
+}
+
 function findFallbackPlace(keyword) {
-  const q = keyword.replace(/\s/g, '').toLowerCase();
+  const q = normalizeKeyword(keyword);
   if (!q) return null;
   return seoulPlaceFallbacks.find((place) => {
-    const name = place.name.replace(/\s/g, '').toLowerCase();
-    const address = place.address.replace(/\s/g, '').toLowerCase();
-    return name.includes(q) || q.includes(name) || address.includes(q);
+    const name = normalizeKeyword(place.name);
+    const address = normalizeKeyword(place.address);
+    return name.includes(q) || q.includes(name) || address.includes(q) || q.includes(address);
   }) || null;
+}
+
+function buildGeocodeQueries(keyword) {
+  const q = keyword.trim();
+  const list = [q];
+  if (!q.includes('서울')) list.push(`서울 ${q}`);
+  list.push(`${q} 서울`);
+  const fallback = findFallbackPlace(q);
+  if (fallback?.address) list.push(fallback.address);
+  return [...new Set(list.filter(Boolean))];
+}
+
+function geocodeOnce(query) {
+  return new Promise((resolve) => {
+    window.naver.maps.Service.geocode({ query }, (status, response) => {
+      if (status !== window.naver.maps.Service.Status.OK) {
+        resolve(null);
+        return;
+      }
+      const addresses = response?.v2?.addresses || [];
+      if (!addresses.length) {
+        resolve(null);
+        return;
+      }
+      const result = addresses[0];
+      resolve({
+        name: query,
+        lat: Number(result.y),
+        lng: Number(result.x),
+        address: result.roadAddress || result.jibunAddress || result.englishAddress || query,
+        source: 'naver-geocoding'
+      });
+    });
+  });
+}
+
+async function searchNaverGeocode(keyword) {
+  const queries = buildGeocodeQueries(keyword);
+  for (const query of queries) {
+    const found = await geocodeOnce(query);
+    if (found && Number.isFinite(found.lat) && Number.isFinite(found.lng)) {
+      return { ...found, name: keyword };
+    }
+  }
+  return null;
+}
+
+function makeSmartwayLink(placeName) {
+  return `${SMARTWAY_URL}?q=${encodeURIComponent(placeName || '')}`;
+}
+
+function makeNaverMapSearchLink(placeName) {
+  return `${NAVER_MAP_SEARCH_URL}${encodeURIComponent(placeName || '')}`;
 }
 
 function ChecklistBlock({ title, text, tone = 'green' }) {
@@ -144,7 +202,7 @@ function ActionLink({ href, children }) {
   );
 }
 
-function MapPanel({ selectedWork }) {
+function MapPanel() {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const workMarkerRef = useRef(null);
@@ -154,9 +212,10 @@ function MapPanel({ selectedWork }) {
 
   const [mapStatus, setMapStatus] = useState('지도 불러오는 중');
   const [placeQuery, setPlaceQuery] = useState('서울광장');
-  const [selectedPlace, setSelectedPlace] = useState({ name: '서울광장', lat: 37.5665, lng: 126.9780, address: '서울 중구 세종대로' });
+  const [selectedPlace, setSelectedPlace] = useState({ name: '서울광장', lat: 37.5665, lng: 126.9780, address: '서울 중구 세종대로', source: 'initial' });
   const [nearbyCctvs, setNearbyCctvs] = useState([]);
-  const [searchMessage, setSearchMessage] = useState('작업구역을 검색하면 주변 CCTV 목록이 갱신됩니다.');
+  const [searchMessage, setSearchMessage] = useState('작업구역을 검색하면 네이버 지오코딩 결과 기준으로 주변 CCTV가 갱신됩니다.');
+  const [isSearching, setIsSearching] = useState(false);
 
   function clearCctvMarkers() {
     cctvMarkerRefs.current.forEach((marker) => marker.setMap(null));
@@ -226,15 +285,13 @@ function MapPanel({ selectedWork }) {
       circleRef.current.setCenter(pos);
     }
 
-    if (!infoWindowRef.current) {
-      infoWindowRef.current = new window.naver.maps.InfoWindow();
-    }
+    if (!infoWindowRef.current) infoWindowRef.current = new window.naver.maps.InfoWindow();
     infoWindowRef.current.setContent(`<div class="info-window"><strong>${place.name}</strong><br/>${place.address || ''}<br/>반경 500m CCTV 확인</div>`);
     infoWindowRef.current.open(map, workMarkerRef.current);
     updateCctvMarkers(map, place);
   }
 
-  function searchWorkPlace(event) {
+  async function searchWorkPlace(event) {
     event?.preventDefault();
     const keyword = placeQuery.trim();
     if (!keyword) {
@@ -242,42 +299,60 @@ function MapPanel({ selectedWork }) {
       return;
     }
     if (!window.naver?.maps?.Service?.geocode) {
-      setSearchMessage('네이버 지오코딩 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도하세요.');
+      setSearchMessage('지오코딩 모듈을 불러오지 못했습니다. maps.js 주소에 &submodules=geocoder가 포함되어야 합니다.');
       return;
     }
 
-    setSearchMessage('작업구역 검색 중...');
+    setIsSearching(true);
+    setSearchMessage('네이버 지오코딩으로 작업구역 검색 중...');
 
-    const fallback = findFallbackPlace(keyword);
-    const applyPlace = (place, message) => {
-      setSelectedPlace(place);
-      updateWorkPlace(place);
-      setSearchMessage(message);
-    };
+    try {
+      const geocoded = await searchNaverGeocode(keyword);
+      const fallback = findFallbackPlace(keyword);
+      const place = geocoded || (fallback ? { ...fallback, source: 'built-in-place' } : null);
 
-    const geocodeKeyword = keyword.includes('서울') ? keyword : `서울 ${keyword}`;
-    window.naver.maps.Service.geocode({ query: geocodeKeyword }, (status, response) => {
-      const addresses = response?.v2?.addresses || [];
+      if (!place) {
+        setSearchMessage('검색 결과가 없습니다. 주소는 도로명/지번으로 입력하고, 공원명은 예: 서울숲, 보라매공원, 양재시민의숲처럼 입력하세요.');
+        return;
+      }
 
-      if (status === window.naver.maps.Service.Status.OK && addresses.length) {
-        const result = addresses[0];
+      const sourceMessage = place.source === 'naver-geocoding'
+        ? '네이버 지오코딩 결과 기준으로 이동했습니다.'
+        : '네이버 지오코딩 결과가 없어 내장된 서울 공원/녹지 좌표로 이동했습니다.';
+
+      const nextPlace = { ...place, name: keyword };
+      setSelectedPlace(nextPlace);
+      updateWorkPlace(nextPlace);
+      setSearchMessage(`${sourceMessage} 반경 500m 주변 CCTV 목록을 갱신했습니다.`);
+    } catch (error) {
+      setSearchMessage(`검색 처리 중 오류가 발생했습니다: ${error?.message || '알 수 없는 오류'}`);
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setSearchMessage('이 브라우저에서는 현재 위치를 사용할 수 없습니다.');
+      return;
+    }
+    setSearchMessage('현재 위치 확인 중...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
         const place = {
-          name: keyword,
-          lat: Number(result.y),
-          lng: Number(result.x),
-          address: result.roadAddress || result.jibunAddress || result.englishAddress || ''
+          name: '현재 위치',
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          address: '브라우저 GPS 기준',
+          source: 'gps'
         };
-        applyPlace(place, '네이버지도 검색 결과 기준으로 반경 500m 주변 CCTV 목록을 갱신했습니다.');
-        return;
-      }
-
-      if (fallback) {
-        applyPlace(fallback, '네이버 지오코딩 결과가 없어 등록된 서울 녹지/공원 좌표로 이동했습니다. 주변 CCTV 목록을 갱신했습니다.');
-        return;
-      }
-
-      setSearchMessage('검색 결과가 없습니다. 네이버 클라우드에서 Geocoding API가 켜져 있는지 확인하세요. 예: 서울숲, 보라매공원, 양재시민의숲');
-    });
+        setSelectedPlace(place);
+        updateWorkPlace(place);
+        setSearchMessage('현재 위치 기준으로 주변 CCTV 목록을 갱신했습니다.');
+      },
+      () => setSearchMessage('현재 위치 권한이 거부되었거나 위치를 가져오지 못했습니다.'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   }
 
   useEffect(() => {
@@ -295,7 +370,7 @@ function MapPanel({ selectedWork }) {
         });
         mapInstance.current = map;
         updateWorkPlace(selectedPlace);
-        setMapStatus('지도 연동 완료');
+        setMapStatus(window.naver?.maps?.Service?.geocode ? '지도/지오코딩 연동 완료' : '지도 연동 완료 · 지오코딩 모듈 미확인');
       })
       .catch(() => setMapStatus('네이버 지도 인증 또는 호출 실패'));
     return () => { cancelled = true; };
@@ -311,9 +386,13 @@ function MapPanel({ selectedWork }) {
           <input
             value={placeQuery}
             onChange={(event) => setPlaceQuery(event.target.value)}
-            placeholder="예: 서울숲, 보라매공원, 양재시민의숲"
+            placeholder="예: 서울숲, 보라매공원, 서울 중구 세종대로"
           />
-          <button type="submit">검색</button>
+          <button type="submit" disabled={isSearching}>{isSearching ? '검색 중' : '검색'}</button>
+        </div>
+        <div className="search-actions">
+          <button type="button" onClick={useCurrentLocation}>현재 위치</button>
+          <a href={makeNaverMapSearchLink(placeQuery)} target="_blank" rel="noreferrer">네이버지도에서 확인</a>
         </div>
         <p>{searchMessage}</p>
       </form>
@@ -352,8 +431,15 @@ function MapPanel({ selectedWork }) {
           <span>기상청</span>
         </div>
         <p className="place-label">작업구역: {selectedPlace.name}</p>
-        <p className="weather-note">작업 전 강수·폭염·한파·강풍 확인</p><div className="warning-box"><b>기상특보</b><span>특보가 내려진 경우 기상청 특보 화면에서 실시간 내용 확인</span></div>
-        <div className="weather-actions"><ActionLink href={WEATHER_URL}>기상청 날씨 확인</ActionLink><ActionLink href={WEATHER_WARNING_URL}>기상특보 확인</ActionLink></div>
+        <p className="weather-note">작업 전 강수·폭염·한파·강풍 확인</p>
+        <div className="warning-box">
+          <b>기상특보</b>
+          <span>특보 발효 시 기상청 특보현황에서 현재 내용 확인</span>
+        </div>
+        <div className="weather-actions">
+          <ActionLink href={WEATHER_URL}>기상청 날씨 확인</ActionLink>
+          <ActionLink href={WEATHER_WARNING_URL}>기상특보 확인</ActionLink>
+        </div>
       </div>
     </section>
   );
@@ -392,7 +478,7 @@ function App() {
       </header>
 
       <main className="grid">
-        <MapPanel selectedWork={selectedWork} />
+        <MapPanel />
 
         <aside className="side-panel">
           <section className="card select-card">

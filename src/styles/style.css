@@ -29,6 +29,9 @@ h1 { margin: 0; font-size: 25px; letter-spacing: -.03em; }
 .search-line { display: grid; grid-template-columns: 1fr 82px; gap: 8px; }
 .search-line input { min-width: 0; border: 1px solid #d3dfd8; border-radius: 12px; padding: 11px 12px; background: #fff; }
 .search-line button { border: 0; border-radius: 12px; background: #16a34a; color: #fff; font-weight: 800; cursor: pointer; }
+.search-line button:disabled { opacity: .65; cursor: wait; }
+.search-actions { display: grid; grid-template-columns: 110px 1fr; gap: 8px; margin-top: 8px; }
+.search-actions button, .search-actions a { border: 1px solid #d3dfd8; background: #f8faf9; color: #14532d; text-decoration: none; border-radius: 11px; min-height: 34px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; cursor: pointer; }
 .map-search p { margin: 8px 0 0; color: #5d6b63; font-size: 12px; }
 .legend { position: absolute; bottom: 16px; left: 16px; z-index: 2; display: flex; gap: 10px; flex-wrap: wrap; background: rgba(255,255,255,.94); padding: 10px 12px; border-radius: 12px; box-shadow: 0 10px 24px rgba(15,23,42,.13); font-size: 13px; }
 .legend span { display:flex; align-items:center; gap:5px; }
