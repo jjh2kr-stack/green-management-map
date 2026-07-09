@@ -92,3 +92,19 @@ h1 { margin: 0; font-size: 25px; letter-spacing: -.03em; }
   .legend { display: none; }
   .map-status { top: 116px; }
 }
+.suggestion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.suggestion-row button {
+  border: 1px solid #d1fae5;
+  background: #ecfdf5;
+  color: #065f46;
+  border-radius: 999px;
+  padding: 5px 9px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.suggestion-row button:hover { background: #d1fae5; }
