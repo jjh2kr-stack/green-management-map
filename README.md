@@ -1,20 +1,24 @@
-# GreenTBM v1.1 검색 수정판
+# GreenTBM v2 최종 재구성본
 
-## 핵심 수정
-- 오목교역 같은 장소명 검색을 위해 Vercel 서버리스 API 추가
-- 네이버 지역검색 API 사용 가능
-- 환경변수 미설정 시에도 주요 장소는 내장 좌표로 검색
-- 네이버지도에서 직접 검색 열기 버튼 추가
+## 먼저 Vercel 환경변수 2개
+- `NAVER_SEARCH_CLIENT_ID` = 네이버 개발자센터 GreenTBM의 Client ID
+- `NAVER_SEARCH_CLIENT_SECRET` = 네이버 개발자센터 GreenTBM의 Client Secret
+- 적용 환경: Production and Preview
+- 저장 후 반드시 Redeploy
 
-## 반드시 알아야 할 점
-네이버 Maps Geocoding은 주소 검색용이라 `오목교역` 같은 장소명은 잘 안 됩니다.
-장소명 검색은 네이버 개발자센터의 `검색 API > 지역`을 써야 합니다.
+## 네이버 클라우드 Maps
+`src/config.js`의 `NAVER_MAPS_CLIENT_ID`는 네이버 클라우드 Maps Client ID입니다.
+현재 값은 기존에 사용하던 키로 입력되어 있습니다.
+Web 서비스 URL에는 실제 배포 도메인을 등록하세요.
 
-## Vercel 환경변수
-Vercel Project Settings > Environment Variables에 아래 2개를 넣으세요.
+## 검색 순서
+1. 교량·IC·관할구간 내장 검색
+2. 네이버 지역 검색 API: 역명, 공원명, 시설명
+3. 네이버 Maps Geocoding: 도로명·지번 주소
 
-NAVER_SEARCH_CLIENT_ID
-NAVER_SEARCH_CLIENT_SECRET
+## 확인 주소
+- 앱 상태: `/api/health`
+- 정상 예시: `{ "ok": true, "searchClientId": true, "searchClientSecret": true }`
 
-네이버 클라우드 Maps Client ID와 다릅니다.
-네이버 개발자센터에서 애플리케이션을 만들고 `검색` API를 사용 설정해야 합니다.
+## GitHub 업로드
+ZIP을 풀고 폴더 안의 `api`, `src`, `index.html`, `package.json`, `README.md`를 저장소 최상단에 올리세요.

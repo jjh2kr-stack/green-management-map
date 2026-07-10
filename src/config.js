@@ -1,2 +1,2 @@
-export const NAVER_CLIENT_ID = 'bfyno0gxjg';
-export const BUFFER_METERS = 250;
+export const NAVER_MAPS_CLIENT_ID = 'bfyno0gxjg';
+export const JURISDICTION_BUFFER_METERS = 250;

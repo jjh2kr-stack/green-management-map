@@ -1,4 +1,8 @@
 {
+  "name": "greentbm-v2-final",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
@@ -9,6 +13,5 @@
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest"
-  },
-  "devDependencies": {}
+  }
 }

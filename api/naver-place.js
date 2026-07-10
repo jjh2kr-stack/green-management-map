@@ -1,26 +1,38 @@
-
 export default async function handler(req, res) {
-  const query = req.query.query;
-  if (!query) return res.status(400).json({ error: "query required" });
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'GET only' });
+  }
+
+  const query = String(req.query?.query || '').trim();
+  if (!query) return res.status(400).json({ error: '검색어가 없습니다.' });
 
   const clientId = process.env.NAVER_SEARCH_CLIENT_ID;
   const clientSecret = process.env.NAVER_SEARCH_CLIENT_SECRET;
-
   if (!clientId || !clientSecret) {
-    return res.status(200).json({ items: [], note: "NAVER_SEARCH_CLIENT_ID / NAVER_SEARCH_CLIENT_SECRET not set" });
+    return res.status(503).json({
+      error: 'NAVER_SEARCH_CLIENT_ID 또는 NAVER_SEARCH_CLIENT_SECRET 환경변수가 없습니다.'
+    });
   }
 
   try {
-    const url = "https://openapi.naver.com/v1/search/local.json?display=5&query=" + encodeURIComponent(query);
-    const r = await fetch(url, {
+    const endpoint = new URL('https://openapi.naver.com/v1/search/local.json');
+    endpoint.searchParams.set('query', query);
+    endpoint.searchParams.set('display', '10');
+    endpoint.searchParams.set('start', '1');
+    endpoint.searchParams.set('sort', 'random');
+
+    const response = await fetch(endpoint, {
       headers: {
-        "X-Naver-Client-Id": clientId,
-        "X-Naver-Client-Secret": clientSecret
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret
       }
     });
-    const data = await r.json();
-    return res.status(200).json(data);
-  } catch (e) {
-    return res.status(500).json({ error: String(e) });
+    const body = await response.text();
+    res.status(response.status);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return res.send(body);
+  } catch (error) {
+    return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 }
